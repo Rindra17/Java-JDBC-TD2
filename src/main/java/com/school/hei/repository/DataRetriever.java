@@ -39,7 +39,7 @@ public class DataRetriever {
            dishStmt.setInt(1, id);
            dishRs = dishStmt.executeQuery();
            if (!dishRs.next()) {
-               throw new RuntimeException("Dish with ID" + id +" not found");
+               throw new RuntimeException("Dish with ID " + id +" not found");
            }
 
            Dish dish = new Dish();
@@ -69,8 +69,43 @@ public class DataRetriever {
         }
     }
 
-    List<Ingredient> findIngredients(int page, int size) {
-        throw new RuntimeException("Not implemented");
+    public List<Ingredient> findIngredients(int page, int size) {
+        String sql = """
+            select i.id as ing_id, i.name as ing_name, i.price as ing_price, i.category as ing_category, i.id_dish
+            from ingredient i
+            order by i.id
+            limit ? offset ?
+        """;
+
+        int offset = (page - 1) * size;
+        Connection con;
+        PreparedStatement ingredientStmt;
+        ResultSet ingredientRs;
+
+        try {
+            con = dbConnection.getDBConnection();
+            ingredientStmt = con.prepareStatement(sql);
+            ingredientStmt.setInt(1, size);
+            ingredientStmt.setInt(2, offset);
+            ingredientRs = ingredientStmt.executeQuery();
+            List<Ingredient> ingredients = new ArrayList<>();
+            while (ingredientRs.next()) {
+                Ingredient ingredient = new Ingredient();
+                ingredient.setId(ingredientRs.getInt("ing_id"));
+                ingredient.setName(ingredientRs.getString("ing_name"));
+                ingredient.setPrice(ingredientRs.getDouble("ing_price"));
+                ingredient.setCategory(CategoryEnum.valueOf(ingredientRs.getString("ing_category")));
+                if (ingredientRs.getInt("id_dish") > 0) {
+                    ingredient.setDish(findDishById(ingredientRs.getInt("id_dish")));
+                }
+                ingredients.add(ingredient);
+            }
+            dbConnection.closeDBConnection(con);
+            return ingredients;
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     List<Ingredient> createIngredients(List<Ingredient> newIngredients) {

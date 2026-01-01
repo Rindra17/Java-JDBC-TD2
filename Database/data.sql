@@ -2,7 +2,7 @@
 \c mini_dish_db
 
 insert into Dish (id, name, dish_type) 
-values  (1, 'Salade fraîche', 'STARTER'),
+values  (1, 'Salade fraîche', 'START'),
         (2, 'Poulet grillé', 'MAIN'),
         (3, 'Riz aux légumes', 'MAIN'),
         (4, 'Gâteau au chocolat', 'DESSERT'),

@@ -1,7 +1,7 @@
 
 \c mini_dish_db
 
-create type dish_types as enum ('START', 'MAIN', 'DESSERT');
+create type dish_types as enum ('STARTER', 'MAIN', 'DESSERT');
 
 create type categories as enum ('VEGETABLE', 'ANIMAL', 'MARINE', 'DAIRY', 'OTHER');
 

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourcePerFileMappings">
-    <file url="file://$PROJECT_DIR$/resources/sql/data.sql" value="3552b69f-ab72-41d4-9c2e-b7f65801a307" />
-    <file url="file://$PROJECT_DIR$/resources/sql/db.sql" value="3552b69f-ab72-41d4-9c2e-b7f65801a307" />
     <file url="file://$PROJECT_DIR$/src/main/java/com/school/hei/repository/DataRetriever.java" value="3552b69f-ab72-41d4-9c2e-b7f65801a307" />
+    <file url="file://$PROJECT_DIR$/src/resources/sql/data.sql" value="3552b69f-ab72-41d4-9c2e-b7f65801a307" />
+    <file url="file://$PROJECT_DIR$/src/resources/sql/db.sql" value="3552b69f-ab72-41d4-9c2e-b7f65801a307" />
   </component>
 </project>

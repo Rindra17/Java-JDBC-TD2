@@ -85,7 +85,7 @@ public class DataRetriever {
             conn.setAutoCommit(false);
             String insertSql = """
                         INSERT INTO ingredient (id, name, category, price)
-                        VALUES (?, ?, ?::categories, ?)
+                        VALUES (?, ?, ?::ingredient_category, ?)
                         returning id
                     """;
             try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
@@ -175,7 +175,7 @@ public class DataRetriever {
             for (StockMovement mvt : ingredient.getStockMovementList()) {
                 if (mvt.getId() != null) {
                     ps.setInt(1, mvt.getId());
-                }else{
+                } else {
                     ps.setInt(1, getNextSerialValue(connection, "stockmovement", "id"));
                 }
                 ps.setInt(2, ingredient.getId());
@@ -217,6 +217,39 @@ public class DataRetriever {
                 }
                 throw new RuntimeException("Ingredient not found " + id);
             }
+        }
+    }
+
+    public List<DishIngredient> findDishIngredientById(Integer id) throws SQLException {
+        List<DishIngredient> dishIngredients = new ArrayList<>();
+        String sql = """
+                select d.id , id_dish,id_ingredient, required_quantity, unit,
+                i.id as ing_id , i.name as ing_name, i.price as ing_price,
+                i.category as ing_category
+                from dish_ingredient d join ingredient i
+                on d.id_ingredient = i.id
+                where id_dish = ?
+                """;
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setInt(1, id);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                DishIngredient dishIng = new DishIngredient();
+                Ingredient ing = new Ingredient();
+                dishIng.setId(resultSet.getInt(1));
+                dishIng.setQuantity(resultSet.getDouble("required_quantity"));
+                dishIng.setUnit(UnitType.valueOf(resultSet.getString("unit")));
+
+                ing.setId(resultSet.getInt("ing_id"));
+                ing.setName(resultSet.getString("ing_name"));
+                ing.setPrice(resultSet.getDouble("ing_price"));
+                ing.setCategory(CategoryEnum.valueOf(resultSet.getString("ing_category")));
+                dishIng.setIngredient(ing);
+                dishIngredients.add(dishIng);
+
+            }
+            return dishIngredients;
         }
     }
 

@@ -163,7 +163,7 @@ public class DataRetrieverTest {
     @Test
     @Order(1)
     @DisplayName("a) findDishById with id=1 should return Salade fraîche with 2 ingredients (Laitue et Tomate)")
-    public void testFindDishById_1() {
+    public void testFindDishById_1() throws SQLException {
         Dish dish = dataRetriever.findDishById(1);
         List<DishIngredient> ingredients = dish.getIngredients();
 

@@ -3,6 +3,7 @@ package com.school.hei.model;
 import com.school.hei.type.CategoryEnum;
 import com.school.hei.type.MovementTypeEnum;
 import com.school.hei.type.UnitType;
+import com.school.hei.util.UnitConverter;
 
 import java.time.Instant;
 import java.util.List;
@@ -90,17 +91,18 @@ public class Ingredient {
                         .isBefore(t) || stockMovement.getCreationDatetime().equals(t))
                 .toList();
         double quantity = 0.0;
-        UnitType type = UnitType.KG;
         for (StockMovement sm : concerned) {
-            if (sm.getType() == MovementTypeEnum.IN) {
-                quantity += sm.getValue().getQuantity();
-            } else {
-                quantity -= sm.getValue().getQuantity();
-            }
+            double quantitySm = sm.getValue().getQuantity();
+            UnitType unitType = sm.getValue().getUnit();
+            double quantityInKg = UnitConverter.convertTo(name, unitType, UnitType.KG, quantitySm);
 
-            type = sm.getValue().getUnit();
+            if (sm.getType() == MovementTypeEnum.IN) {
+                quantity += quantityInKg;
+            } else {
+                quantity -= quantityInKg;
+            }
         }
-        return new StockValue(quantity, type);
+        return new StockValue(quantity, UnitType.KG);
     }
 
     @Override

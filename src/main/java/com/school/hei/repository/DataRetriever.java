@@ -6,9 +6,11 @@ import com.school.hei.type.CategoryEnum;
 import com.school.hei.type.DishTypeEnum;
 import com.school.hei.type.MovementTypeEnum;
 import com.school.hei.type.UnitType;
+import com.school.hei.util.UnitConverter;
 import com.sun.jdi.Value;
 
 import java.sql.*;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -387,6 +389,118 @@ public class DataRetriever {
             }
         }
         return null;
+    }
+
+    public Order saveOrder(Order orderToSave) throws SQLException {
+        Connection conn = null;
+        try {
+            conn = dbConnection.getDBConnection();
+            conn.setAutoCommit(false);
+
+            checkStockAvailability(orderToSave, conn);
+
+            String reference = generateOrderReference(conn);
+            orderToSave.setReference(reference);
+
+            insertOrder(orderToSave, conn);
+
+            insertDishOrderLines(orderToSave, conn);
+
+            conn.commit();
+            return orderToSave;
+
+        } catch (SQLException e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ignored) {
+                }
+            }
+            throw new RuntimeException("Erreur lors de la création de la commande", e);
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException ignored) {
+                }
+            }
+        }
+    }
+
+    private void checkStockAvailability(Order order, Connection conn) throws SQLException {
+        StringBuilder errorMsg = new StringBuilder();
+
+        for (DishOrder doLine : order.getDishOrders()) {
+            Dish dish = findDishById(doLine.getDish().getId());
+
+            for (DishIngredient comp : dish.getIngredients()) {
+                Ingredient ing = findIngredientById(comp.getIngredient().getId());
+                double required = doLine.getQuantity() * comp.getQuantity();
+
+                try {
+                    double requiredKG = UnitConverter.convertTo(ing.getName(), comp.getUnit(), UnitType.KG, required);
+                    double currentKG = ing.getStockValueAt(Instant.now()).getQuantity();
+                    if (currentKG < requiredKG) {
+                        errorMsg.append(String.format(
+                                "Ingrédient '%s' insuffisant (besoin: %.2f KG, disponible: %.2f)%n",
+                                ing.getName(), requiredKG, currentKG
+                        ));
+                    }
+                } catch (IllegalArgumentException e) {
+                    errorMsg.append("Convertion impossible: ").append(e.getMessage());
+                }
+
+            }
+        }
+
+        if (errorMsg.length() > 0) {
+            throw new RuntimeException("Stock insuffisant :\n" + errorMsg);
+        }
+    }
+
+    private String generateOrderReference(Connection conn) throws SQLException {
+        String sql = "SELECT COALESCE(MAX(CAST(SUBSTRING(reference FROM 4) AS INT)), 0) + 1 FROM \"order\"";
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                int next = rs.getInt(1);
+                return String.format("ORD%05d", next);
+            }
+            return "ORD00001";
+        }
+    }
+
+    private void insertOrder(Order order, Connection conn) throws SQLException {
+        String sql = "INSERT INTO \"order\" (reference) VALUES (?) RETURNING id, creation_datetime";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, order.getReference());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    order.setId(rs.getInt("id"));
+                    order.setCreationDateTime(rs.getTimestamp("creation_datetime").toInstant());
+                } else {
+                    throw new SQLException("Échec insertion commande");
+                }
+            }
+        }
+    }
+
+    private void insertDishOrderLines(Order order, Connection conn) throws SQLException {
+        String sql = "INSERT INTO dish_order (id_order, id_dish, quantity) VALUES (?, ?, ?) RETURNING id";
+        for (DishOrder line : order.getDishOrders()) {
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, order.getId());
+                ps.setInt(2, line.getDish().getId());
+                ps.setInt(3, line.getQuantity());
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        line.setId(rs.getInt(1));
+                    }
+                }
+                line.setOrder(order);
+            }
+        }
     }
 
 }

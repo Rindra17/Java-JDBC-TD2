@@ -503,4 +503,56 @@ public class DataRetriever {
         }
     }
 
+    public List<DishOrder> findDishOrdersByOrderReference(String reference){
+        String sql = """
+                select dso.id as dish_order_id, dso.id_dish as dish_order_id_dish,
+                       dso.quantity as dish_order_quantity , dso.id_order as dish_order_id_order
+                from "order" o
+                join dish_order dso on o.id = dso.id_order
+                where reference = ?;
+                """;
+        try(Connection conn = dbConnection.getDBConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, reference);
+            ResultSet rs = ps.executeQuery();
+            List<DishOrder> dishOrders = new ArrayList<>();
+            while(rs.next()){
+                DishOrder dishOrder = new DishOrder();
+                dishOrder.setId(rs.getInt("dish_order_id"));
+                Dish dish = findDishById(rs.getInt("dish_order_id_dish"));
+                dishOrder.setDish(dish);
+                dishOrder.setQuantity(rs.getInt("dish_order_quantity"));
+                dishOrders.add(dishOrder);
+            }
+            return dishOrders;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Order findOrderByReference(String reference) throws SQLException {
+        String sql = """
+                select o.id, o.reference, o.creation_datetime
+                from "order" o
+                where reference = ?;
+                """;
+        try(Connection conn = dbConnection.getDBConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, reference);
+            ResultSet rs = ps.executeQuery();
+            if(rs.next()){
+                List<DishOrder> dishOrders = new ArrayList<>();
+                dishOrders = findDishOrdersByOrderReference(reference);
+                Order order = new Order();
+                order.setId(rs.getInt("id"));
+                order.setReference(rs.getString("reference"));
+                order.setCreationDateTime(rs.getTimestamp("creation_datetime").toInstant());
+                order.setDishOrders(dishOrders);
+                return order;
+            }
+            throw new RuntimeException("Order not found with reference: " + reference);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

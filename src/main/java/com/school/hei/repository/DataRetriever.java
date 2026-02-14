@@ -555,4 +555,38 @@ public class DataRetriever {
             throw new RuntimeException(e);
         }
     }
+
+    public StockValue getStockValueAt(Instant t, Integer ingId) throws SQLException {
+        String sql = """
+                select id_ingredient,
+                       sum(
+                               case
+                                   when type = 'IN' then quantity
+                                   else quantity * (-1)
+                                   end
+                       ) as quantity, unit
+                from stock_movement sm
+                         join ingredient i on sm.id_ingredient = i.id
+                where i.id = ?
+                  and creation_datetime <= ?
+                group by (id_ingredient, unit)
+                """;
+
+        StockValue stockValue = new StockValue();
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, ingId);
+            ps.setTimestamp(2, Timestamp.from(t));
+            try (ResultSet rs = ps.executeQuery()) {
+                if(rs.next()) {
+                    stockValue.setQuantity(rs.getDouble("quantity"));
+                    stockValue.setUnit(UnitType.valueOf(rs.getString("unit")));
+                }
+                else {
+                    stockValue.setQuantity(0.0);
+                }
+            }
+        }
+        return stockValue;
+    }
 }

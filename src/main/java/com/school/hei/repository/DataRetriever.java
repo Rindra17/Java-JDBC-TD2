@@ -589,4 +589,28 @@ public class DataRetriever {
         }
         return stockValue;
     }
+
+    public Double getDishCost(Integer dishId) throws SQLException {
+        String sql= """
+                select d.name, sum(i.price * di.required_quantity) as dish_cost
+                from dish_ingredient di
+                         join dish d on di.id_dish = d.id
+                         join ingredient i on i.id = di.id_ingredient
+                where d.id = ?
+                group by (d.name);
+                """;
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, dishId);
+            try(ResultSet rs = ps.executeQuery()) {
+                if(rs.next()) {
+                    return rs.getDouble("dish_cost");
+                }
+                else {
+                    return 0.0;
+                }
+            }
+        }
+    }
+
 }

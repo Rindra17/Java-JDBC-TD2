@@ -613,4 +613,29 @@ public class DataRetriever {
         }
     }
 
+    public Double getGrossMargin(Integer dishId) throws SQLException {
+        String sql= """
+                select d.name,
+                       d.selling_price - (select sum(i.price * di.required_quantity)
+                                          from dish_ingredient di
+                                                   join ingredient i on i.id = di.id_ingredient
+                                          where di.id_dish = ?) as margin
+                from dish d
+                where d.id = ?;
+                """;
+        try (Connection conn = dbConnection.getDBConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, dishId);
+            ps.setInt(2, dishId);
+            try(ResultSet rs = ps.executeQuery()) {
+                if(rs.next()) {
+                    return rs.getDouble("margin");
+                }
+                else {
+                    return 0.0;
+                }
+            }
+        }
+    }
+
 }
